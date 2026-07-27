@@ -1,0 +1,64 @@
+name: Build PEPTO APK
+
+# Trigger manually from the Actions tab, or automatically whenever
+# frontend/ changes on main. Manual trigger works fine from the
+# GitHub mobile app (Actions -> Build PEPTO APK -> Run workflow).
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Ensure platform folders exist (self-heals if android/ios/etc are missing)
+        run: |
+          flutter create . --platforms=android,ios,web,linux,macos,windows --org com.pepto --project-name pepto
+
+      - name: Generate code (freezed / json_serializable / riverpod)
+        run: flutter pub run build_runner build --delete-conflicting-outputs
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+        continue-on-error: true
+
+      - name: Build release APK
+        run: |
+          flutter build apk --release \
+            --dart-define=API_BASE_URL=${{ vars.API_BASE_URL || 'http://localhost:3000/api/v1' }} \
+            --dart-define=STRIPE_PUBLISHABLE_KEY=${{ secrets.STRIPE_PUBLISHABLE_KEY }} \
+            --dart-define=ENVIRONMENT=production
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pepto-release-apk
+          path: frontend/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30

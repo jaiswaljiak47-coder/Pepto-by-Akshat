@@ -1,0 +1,6 @@
+# Copy this file to local.properties (which is gitignored) and fill in your
+# local SDK paths. On CI (GitHub Actions / Codemagic) this file is generated
+# automatically by the Flutter/Android setup actions, so you do NOT need to
+# commit a real local.properties.
+sdk.dir=/path/to/Android/sdk
+flutter.sdk=/path/to/flutter

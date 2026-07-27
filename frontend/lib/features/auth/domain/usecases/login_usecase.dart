@@ -1,0 +1,13 @@
+import 'package:dartz/dartz.dart';
+import '../../../../core/error/failures.dart';
+import '../entities/auth_user.dart';
+import '../repositories/auth_repository.dart';
+
+class LoginUseCase {
+  LoginUseCase(this._repository);
+  final AuthRepository _repository;
+
+  Future<Either<Failure, AuthUser>> call(String email, String password) {
+    return _repository.login(email, password);
+  }
+}

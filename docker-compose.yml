@@ -1,0 +1,52 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pepto_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pepto
+      POSTGRES_PASSWORD: pepto_secret
+      POSTGRES_DB: pepto_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - pepto_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U pepto']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: pepto_redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - pepto_redis_data:/data
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pepto_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - ./backend/.env
+    environment:
+      DB_HOST: postgres
+      REDIS_HOST: redis
+    ports:
+      - '3000:3000'
+
+volumes:
+  pepto_pg_data:
+  pepto_redis_data:

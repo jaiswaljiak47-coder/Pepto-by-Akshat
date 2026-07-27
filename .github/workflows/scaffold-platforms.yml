@@ -1,0 +1,58 @@
+name: Scaffold Flutter Platform Folders
+
+# One-time (or as-needed) job: runs the REAL `flutter create .` using the
+# actual Flutter SDK on GitHub's runner. This fills in every file that can't
+# be safely hand-written outside the SDK — Android's gradle-wrapper.jar,
+# iOS's Xcode project (.pbxproj), CMake files for linux/macos/windows, and
+# app icon PNGs — then commits the results straight back to this branch.
+#
+# It is non-destructive: `flutter create .` only creates files that are
+# missing; it does not overwrite your existing lib/, pubspec.yaml, or assets/.
+#
+# Run it from the Actions tab -> "Scaffold Flutter Platform Folders" -> Run workflow.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scaffold:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Generate all missing platform folders
+        run: |
+          flutter create . \
+            --platforms=android,ios,web,linux,macos,windows \
+            --org com.pepto \
+            --project-name pepto
+
+      - name: Restore dependencies
+        run: flutter pub get
+
+      - name: Sanity-build APK
+        run: flutter build apk --debug
+
+      - name: Commit generated platform folders
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add android ios web linux macos windows
+          git diff --cached --quiet && echo "Nothing to commit" || git commit -m "chore: scaffold Flutter platform folders (android, ios, web, linux, macos, windows)"
+          git push
